@@ -203,7 +203,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies", cascade = { CascadeType.REFRESH })
+    @ManyToMany(mappedBy = "dependencies")
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -599,7 +599,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     @Override
     public int hashCode() {
-        return 31;
+        return id != null ? id.hashCode() : 0;
     }
 
     public static final String CLONE_PREFIX_DATE_FORMAT = "yyyyMMddHHmmss";

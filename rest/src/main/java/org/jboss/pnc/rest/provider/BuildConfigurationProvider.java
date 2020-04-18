@@ -141,7 +141,7 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
             throws RestValidationException {
         super.validateBeforeUpdating(id, buildConfigurationRest);
         validateIfItsNotConflicted(buildConfigurationRest);
-        validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
+        //validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
     }
 
     private void validateRepositoryConfigurationId(RepositoryConfigurationRest repositoryConfiguration) throws InvalidEntityException {
