@@ -49,6 +49,8 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -155,10 +157,12 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     @NotNull
     @Column(columnDefinition = "timestamp with time zone", updatable=false)
+    @Temporal(TemporalType.TIMESTAMP)
     private Date creationTime;
 
     @NotNull
     @Column(columnDefinition = "timestamp with time zone")
+    @Temporal(TemporalType.TIMESTAMP)
     private Date lastModificationTime;
 
     /**
@@ -763,17 +767,17 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             }
 
             // Set the bi-directional mapping
-            //for (BuildConfiguration dependency : dependencies) {
-            //    if (!dependency.getDependants().contains(buildConfiguration)) {
-            //        dependency.addDependant(buildConfiguration);
-            //    }
-            //}
+            for (BuildConfiguration dependency : dependencies) {
+                if (!dependency.getDependants().contains(buildConfiguration)) {
+                    dependency.addDependant(buildConfiguration);
+                }
+            }
             buildConfiguration.setDependencies(dependencies);
-            //for (BuildConfiguration dependant : dependants) {
-            //    if (!dependant.getDependencies().contains(buildConfiguration)) {
-            //        dependant.addDependant(buildConfiguration);
-            //    }
-            //}
+            for (BuildConfiguration dependant : dependants) {
+                if (!dependant.getDependencies().contains(buildConfiguration)) {
+                    dependant.addDependant(buildConfiguration);
+                }
+            }
             buildConfiguration.setDependants(dependants);
 
             return buildConfiguration;
