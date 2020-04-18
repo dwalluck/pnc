@@ -763,17 +763,17 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             }
 
             // Set the bi-directional mapping
-            for (BuildConfiguration dependency : dependencies) {
-                if (!dependency.getDependants().contains(buildConfiguration)) {
-                    dependency.addDependant(buildConfiguration);
-                }
-            }
+            //for (BuildConfiguration dependency : dependencies) {
+            //    if (!dependency.getDependants().contains(buildConfiguration)) {
+            //        dependency.addDependant(buildConfiguration);
+            //    }
+            //}
             buildConfiguration.setDependencies(dependencies);
-            for (BuildConfiguration dependant : dependants) {
-                if (!dependant.getDependencies().contains(buildConfiguration)) {
-                    dependant.addDependant(buildConfiguration);
-                }
-            }
+            //for (BuildConfiguration dependant : dependants) {
+            //    if (!dependant.getDependencies().contains(buildConfiguration)) {
+            //        dependant.addDependant(buildConfiguration);
+            //    }
+            //}
             buildConfiguration.setDependants(dependants);
 
             return buildConfiguration;
