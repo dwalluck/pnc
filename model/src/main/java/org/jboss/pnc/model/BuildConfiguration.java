@@ -203,7 +203,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies")
+    @ManyToMany(mappedBy = "dependencies", cascade = { CascadeType.REFRESH })
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
