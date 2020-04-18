@@ -599,7 +599,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : 0;
+        return 31;
     }
 
     public static final String CLONE_PREFIX_DATE_FORMAT = "yyyyMMddHHmmss";
