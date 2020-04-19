@@ -60,6 +60,7 @@
           <property name="hibernate.cache.use_query_cache" value="false" />
           <property name="hibernate.cache.region_prefix" value=""/>
           <property name="hibernate.cache.keys_factory" value="simple" />
+          <property name="hibernate.cache.auto_evict_collection_cache" value="true" />
           <!-- <property name="hibernate.cache.infinispan.statistics" value="true"/>
 
           
