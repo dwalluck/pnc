@@ -44,13 +44,12 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.MapKeyColumn;
+import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceException;
 import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -157,12 +156,10 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     @NotNull
     @Column(columnDefinition = "timestamp with time zone", updatable=false)
-    @Temporal(TemporalType.TIMESTAMP)
     private Date creationTime;
 
     @NotNull
     @Column(columnDefinition = "timestamp with time zone")
-    @Temporal(TemporalType.TIMESTAMP)
     private Date lastModificationTime;
 
     /**
@@ -179,6 +176,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @NotAudited
     @ManyToMany(cascade = { CascadeType.REFRESH })
+    @OrderColumn(name = "dependency_id")
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
