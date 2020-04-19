@@ -34,7 +34,7 @@ import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Entity
 @Table(indexes = {@Index(name="idx_key", columnList = "key")})
 public class GenericSetting implements GenericEntity<Integer> {

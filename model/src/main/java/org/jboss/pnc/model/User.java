@@ -44,7 +44,7 @@ import java.util.Set;
  * @author avibelli
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Entity
 @Table(name = "UserTable", uniqueConstraints = { @UniqueConstraint(name = "uk_user_email", columnNames = { "email" }),
         @UniqueConstraint(name = "uk_user_username", columnNames = { "username" }) })

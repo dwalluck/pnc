@@ -53,7 +53,7 @@ import java.util.Set;
  * performed during a development cycle from the previous milestone until the end of the current milestone.
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(name="uk_productmilestone_vers_prodversid", columnNames = {"version", "productVersion_id"}),
        indexes = @Index(name = "idx_productmilestone_productversion", columnList = "productversion_id")
@@ -128,7 +128,7 @@ public class ProductMilestone implements GenericEntity<Integer> {
      * failed builds consumed machine and human resources even though they were not delivered with
      * the product distribution.
      */
-    @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @OneToMany(mappedBy = "productMilestone", fetch = FetchType.EAGER)
     private Set<BuildRecord> performedBuilds;
 
@@ -140,7 +140,7 @@ public class ProductMilestone implements GenericEntity<Integer> {
      * The BuildRecordSets associated with a milestone should be created when the milestone
      * is first created, and never updated after that.
      */
-    @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @ManyToMany(fetch = FetchType.EAGER) //TODO remove eager fetch
     @JoinTable(name = "product_milestone_distributed_artifacts_map", joinColumns = {
             @JoinColumn(
