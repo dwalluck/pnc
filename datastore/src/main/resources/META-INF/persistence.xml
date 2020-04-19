@@ -42,7 +42,7 @@
           <!-- Configure batches to improve performance when doing bulk inserts and updates.
                Do not exceed with the size because when an entity is persisted, Hibernate stores it in the persistence context (in memory) before flushing.
           -->
-          <property name="hibernate.jdbc.batch_size" value="50"/>
+          <!-- property name="hibernate.jdbc.batch_size" value="50"/ -->
           <!-- <property name="hibernate.order_inserts" value="true"/>
           <property name="hibernate.order_updates" value="true"/>
           <property name="hibernate.batch_versioned_data" value="true"/> -->
@@ -55,7 +55,7 @@
                 - Max idle time before expiration is 100 seconds.
                 - Default eviction algorithm is LRU, least recently used.
           -->
-          <!-- <property name="hibernate.cache.use_reference_entries" value="true" /> -->
+          <property name="hibernate.cache.use_reference_entries" value="true" />
           <property name="hibernate.cache.use_second_level_cache" value="true" />
           <property name="hibernate.cache.use_query_cache" value="false" />
           <property name="hibernate.cache.region_prefix" value=""/>

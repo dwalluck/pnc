@@ -176,7 +176,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(cascade = { CascadeType.REFRESH })
+    @ManyToMany(cascade = { CascadeType.NONE })
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
@@ -204,7 +204,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies")
+    @ManyToMany(mappedBy = "dependencies", cascade = { CascadeType.NONE })
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
