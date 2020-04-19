@@ -45,7 +45,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(name = "uk_buildconfigurationset_name", columnNames = "name"),
        indexes = @Index(name = "idx_buildconfigurationset_productversion", columnList = "productversion_id")
@@ -71,7 +71,7 @@ public class BuildConfigurationSet implements GenericEntity<Integer> {
     @JoinColumn(foreignKey = @ForeignKey(name = "fk_buildconfigurationset_productversion"))
     private ProductVersion productVersion;
 
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
     @ManyToMany
     @JoinTable(name = "build_configuration_set_map", joinColumns = {
             @JoinColumn(

@@ -40,7 +40,7 @@ import javax.persistence.Table;
  * @author <a href="mailto:matejonnet@gmail.com">Matej Lazar</a>
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @Entity
 @Table(indexes = {@Index(name = "idx_buildrecordpushresult_buildrecord", columnList = "buildRecord_id")})
 public class BuildRecordPushResult implements GenericEntity<Integer> {

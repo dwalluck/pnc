@@ -44,7 +44,7 @@ import java.util.Set;
  *
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @Entity
 @Table(uniqueConstraints = {
         @UniqueConstraint(name="uk_product_abbreviation", columnNames = "abbreviation"),
@@ -88,7 +88,7 @@ public class Product implements GenericEntity<Integer> {
     @Size(max=50)
     private String pgmSystemName;
 
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
     @OneToMany(mappedBy = "product", cascade = { CascadeType.REFRESH, CascadeType.DETACH,
             CascadeType.REMOVE })
     private Set<ProductVersion> productVersions;

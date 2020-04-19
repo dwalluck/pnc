@@ -44,7 +44,7 @@ import java.util.Set;
  * @author Jakub Bartecek
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @Entity
 @Table(uniqueConstraints = {@UniqueConstraint(name = "uk_repositoryconfiguration_externalurl", columnNames = {"externalurl"}),
         @UniqueConstraint(name = "uk_repositoryconfiguration_externalurlnormalized", columnNames = {"externalurlnormalized"}),

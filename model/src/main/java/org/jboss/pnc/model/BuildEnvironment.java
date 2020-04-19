@@ -51,7 +51,7 @@ import java.util.Map;
  * @author avibelli
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(name="uk_buildenvironment_name", columnNames = "name"),
        indexes = {
@@ -99,7 +99,7 @@ public class BuildEnvironment implements GenericEntity<Integer> {
     @Enumerated(EnumType.STRING)
     private SystemImageType systemImageType;
 
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+    @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name="build_environment_attributes", joinColumns=@JoinColumn(name="build_environment_id", foreignKey = @ForeignKey(name = "fk_build_environment_attributes_buildenvironment")))
     @MapKeyColumn(name="name")
