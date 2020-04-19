@@ -59,7 +59,7 @@
           <property name="hibernate.cache.use_second_level_cache" value="true" />
           <property name="hibernate.cache.use_query_cache" value="false" />
           <property name="hibernate.cache.region_prefix" value=""/>
-          <property name="use_structured_entries" value="true" />
+          <property name="hibernate.cache.keys_factory" value="simple" />
           <!-- <property name="hibernate.cache.infinispan.statistics" value="true"/>
 
           
