@@ -141,7 +141,7 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
             throws RestValidationException {
         super.validateBeforeUpdating(id, buildConfigurationRest);
         validateIfItsNotConflicted(buildConfigurationRest);
-        //validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
+        validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
     }
 
     private void validateRepositoryConfigurationId(RepositoryConfigurationRest repositoryConfiguration) throws InvalidEntityException {
@@ -205,6 +205,14 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
                 if (buildConfigRest.getDependencyIds() == null) {
                     // If the client request does not include a list of dependencies, just keep the current set
                     builder.dependencies(buildConfigDB.getDependencies());
+                }
+                else {
+                    Set<BuildConfiguration> dependencies = new HashSet<BuildConfiguration>();
+                    for (Integer dependencyId : buildConfigRest.getDependencyIds()) {
+                        BuildConfiguration dependency = repository.queryById(dependencyId);
+                        dependencies.add(dependency);
+                    }
+                    builder.dependencies(dependencies);
                 }
             }
 
