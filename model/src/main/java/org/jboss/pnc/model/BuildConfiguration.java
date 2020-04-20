@@ -180,7 +180,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
+    @ManyToMany(fetch = FetchType.EAGER, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
@@ -210,7 +210,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class)
+    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.EAGER, targetEntity = BuildConfiguration.class)
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
