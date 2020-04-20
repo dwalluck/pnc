@@ -181,6 +181,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             @JoinColumn(
                 name = "dependency_id",
                 referencedColumnName = "id",
+                nullable = false,
                 foreignKey = @ForeignKey(name = "fk_build_configuration_dep_map_dependency")
             )
         },
@@ -188,6 +189,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             @JoinColumn(
                 name = "dependant_id",
                 referencedColumnName = "id",
+                nullable = false,
                 foreignKey = @ForeignKey(name = "fk_build_configuration_dep_map_dependant")
             )
         },
