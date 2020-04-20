@@ -245,8 +245,7 @@ public class BuildConfigurationRest implements GenericRestEntity<Integer> {
         performIfNotNull(this.getProductVersionId(), () -> builder.productVersion(ProductVersion.Builder.newBuilder().id(productVersionId).build()));
 
         nullableStreamOf(this.getDependencyIds()).forEach(dependencyId -> {
-            BuildConfiguration.Builder buildConfigurationBuilder = BuildConfiguration.Builder.newBuilder().id(dependencyId);
-            builder.dependency(buildConfigurationBuilder.build());
+            builder.dependency(BuildConfiguration.Builder.newBuilder().id(dependencyId).build());
         });
         
         return builder;

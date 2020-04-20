@@ -19,10 +19,13 @@ package org.jboss.pnc.model;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.Type;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.RelationTargetAuditMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.Cacheable;
 import javax.persistence.CascadeType;
@@ -44,7 +47,6 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.MapKeyColumn;
-import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceException;
 import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
@@ -92,6 +94,8 @@ import java.util.stream.Collectors;
 public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     private static final long serialVersionUID = -5890729679489304114L;
+
+    private static final Logger logger = LoggerFactory.getLogger(BuildConfiguration.class);
 
     public static final String DEFAULT_SORTING_FIELD = "name";
     public static final String SEQUENCE_NAME = "build_configuration_id_seq";
@@ -176,7 +180,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
@@ -206,7 +210,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies")
+    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class)
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -381,7 +385,11 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
         boolean result = dependencies.add(dependency);
         if (!dependency.getDependants().contains(this)) {
+            logger.error("!dependency.getDependants().contains(this): {} -> dependency.addDependant(this);", this);
             dependency.addDependant(this);
+        }
+        else {
+            logger.error("dependency.getDependants().contains(this): {}", this);
         }
         return result;
     }
@@ -483,7 +491,11 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
     private boolean addDependant(BuildConfiguration dependant) {
         boolean result = dependants.add(dependant);
         if (!dependant.getDependencies().contains(this)) {
+            logger.error("!dependant.getDependencies().contains(this): {} -> dependant.addDependency(this);", this);
             dependant.addDependency(this);
+        }
+        else {
+            logger.error("dependant.getDependencies().contains(this): {}", this);
         }
         return result;
     }
@@ -770,13 +782,21 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             // Set the bi-directional mapping
             for (BuildConfiguration dependency : dependencies) {
                 if (!dependency.getDependants().contains(buildConfiguration)) {
+                    logger.error("!dependency.getDependants().contains(buildConfiguration): {} -> dependency.addDependant(buildConfiguration);", buildConfiguration);
                     dependency.addDependant(buildConfiguration);
+                }
+                else {
+                    logger.error("dependency.getDependants().contains(buildConfiguration): {}", buildConfiguration);
                 }
             }
             buildConfiguration.setDependencies(dependencies);
             for (BuildConfiguration dependant : dependants) {
                 if (!dependant.getDependencies().contains(buildConfiguration)) {
+                    logger.error("!dependant.getDependencies().contains(buildConfiguration): {} -> dependency.addDependant(buildConfiguration);", buildConfiguration);
                     dependant.addDependant(buildConfiguration);
+                }
+                else {
+                    logger.error("dependant.getDependencies().contains(buildConfiguration): {}", buildConfiguration);
                 }
             }
             buildConfiguration.setDependants(dependants);

@@ -53,7 +53,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.security.PermitAll;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -206,14 +205,6 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
                 if (buildConfigRest.getDependencyIds() == null) {
                     // If the client request does not include a list of dependencies, just keep the current set
                     builder.dependencies(buildConfigDB.getDependencies());
-                }
-                else {
-                    Set<BuildConfiguration> dependencies = new HashSet<BuildConfiguration>();
-                    for (Integer dependencyId : buildConfigRest.getDependencyIds()) {
-                        BuildConfiguration dependency = repository.queryById(dependencyId);
-                        dependencies.add(dependency);
-                    }
-                    builder.dependencies(dependencies);
                 }
             }
 
