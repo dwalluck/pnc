@@ -180,7 +180,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(fetch = FetchType.EAGER, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
+    @ManyToMany(fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
@@ -210,7 +210,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.EAGER, targetEntity = BuildConfiguration.class)
+    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class)
     private Set<BuildConfiguration> dependants;
 
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
@@ -601,20 +601,15 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
     public boolean equals(Object o) {
         if (this == o)
             return true;
-        if (o == null || getClass() != o.getClass())
+        if (!(o instanceof BuildConfiguration))
             return false;
-
-        BuildConfiguration that = (BuildConfiguration) o;
-
-        if (id != null ? !id.equals(that.id) : that.id != null)
-            return false;
-
-        return true;
+        return id != null && id.equals(((BuildConfiguration) o).getId());
     }
 
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : 0;
+        // From https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
+        return 31;
     }
 
     public static final String CLONE_PREFIX_DATE_FORMAT = "yyyyMMddHHmmss";
