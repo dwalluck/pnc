@@ -80,7 +80,7 @@ import java.util.stream.Collectors;
  * @author Jakub Bartecek
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
 @Entity
 @Audited
 @Table(uniqueConstraints = @UniqueConstraint(name = "uk_build_configuration_name", columnNames = {"name", "active"}),
