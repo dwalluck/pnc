@@ -43,8 +43,11 @@ import org.jboss.pnc.rest.validation.groups.WhenUpdating;
 import org.jboss.pnc.spi.datastore.repositories.BuildConfigurationAuditedRepository;
 import org.jboss.pnc.spi.datastore.repositories.BuildConfigurationRepository;
 import org.jboss.pnc.spi.datastore.repositories.BuildConfigurationSetRepository;
+import org.jboss.pnc.spi.datastore.repositories.BuildEnvironmentRepository;
 import org.jboss.pnc.spi.datastore.repositories.PageInfoProducer;
 import org.jboss.pnc.spi.datastore.repositories.ProductVersionRepository;
+import org.jboss.pnc.spi.datastore.repositories.ProjectRepository;
+import org.jboss.pnc.spi.datastore.repositories.RepositoryConfigurationRepository;
 import org.jboss.pnc.spi.datastore.repositories.SortInfoProducer;
 import org.jboss.pnc.spi.datastore.repositories.api.RSQLPredicateProducer;
 import org.slf4j.Logger;
@@ -53,6 +56,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.security.PermitAll;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
+
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,6 +66,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static org.jboss.pnc.rest.utils.StreamHelper.nullableStreamOf;
+import static org.jboss.pnc.rest.utils.Utility.performIfNotNull;
 import static org.jboss.pnc.spi.datastore.predicates.BuildConfigurationPredicates.isNotArchived;
 import static org.jboss.pnc.spi.datastore.predicates.BuildConfigurationPredicates.withBuildConfigurationSetId;
 import static org.jboss.pnc.spi.datastore.predicates.BuildConfigurationPredicates.withDependantConfiguration;
@@ -75,7 +81,8 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
 
     private final Logger logger = LoggerFactory.getLogger(BuildConfigurationProvider.class);
 
-    private static final Pattern REPOSITORY_NAME_PATTERN = Pattern.compile("(\\/[\\w\\.:\\~_-]+)+(\\.git)(?:\\/?|\\#[\\d\\w\\.\\-_]+?)$");
+    private static final Pattern REPOSITORY_NAME_PATTERN = Pattern
+            .compile("(\\/[\\w\\.:\\~_-]+)+(\\.git)(?:\\/?|\\#[\\d\\w\\.\\-_]+?)$");
 
     private BuildConfigurationAuditedRepository buildConfigurationAuditedRepository;
 
@@ -83,19 +90,29 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
 
     private ProductVersionRepository productVersionRepository;
 
+    private BuildEnvironmentRepository buildEnvironmentRepository;
+
+    private RepositoryConfigurationRepository repositoryConfigurationRepository;
+
+    private ProjectRepository projectRepository;
+
     private ScmModuleConfig moduleConfig;
 
     @Inject
     public BuildConfigurationProvider(BuildConfigurationRepository buildConfigurationRepository,
-                                      BuildConfigurationAuditedRepository buildConfigurationAuditedRepository,
-                                      BuildConfigurationSetRepository buildConfigurationSetRepository,
-                                      RSQLPredicateProducer rsqlPredicateProducer, SortInfoProducer sortInfoProducer, PageInfoProducer pageInfoProducer,
-                                      ProductVersionRepository productVersionRepository,
-                                      Configuration configuration) throws ConfigurationParseException {
+            BuildConfigurationAuditedRepository buildConfigurationAuditedRepository,
+            BuildConfigurationSetRepository buildConfigurationSetRepository, RSQLPredicateProducer rsqlPredicateProducer,
+            SortInfoProducer sortInfoProducer, PageInfoProducer pageInfoProducer,
+            ProductVersionRepository productVersionRepository, BuildEnvironmentRepository buildEnvironmentRepository,
+            RepositoryConfigurationRepository repositoryConfigurationRepository, ProjectRepository projectRepository,
+            Configuration configuration) throws ConfigurationParseException {
         super(buildConfigurationRepository, rsqlPredicateProducer, sortInfoProducer, pageInfoProducer);
         this.buildConfigurationAuditedRepository = buildConfigurationAuditedRepository;
         this.buildConfigurationSetRepository = buildConfigurationSetRepository;
         this.productVersionRepository = productVersionRepository;
+        this.buildEnvironmentRepository = buildEnvironmentRepository;
+        this.repositoryConfigurationRepository = repositoryConfigurationRepository;
+        this.projectRepository = projectRepository;
         this.moduleConfig = configuration.getModuleConfig(new PncConfigProvider<>(ScmModuleConfig.class));
     }
 
@@ -125,8 +142,8 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
 
     public CollectionInfo<BuildConfigurationRest> getAllForBuildConfigurationSet(int pageIndex, int pageSize,
             String sortingRsql, String query, Integer buildConfigurationSetId) {
-        return queryForCollection(pageIndex, pageSize, sortingRsql, query,
-                withBuildConfigurationSetId(buildConfigurationSetId), isNotArchived());
+        return queryForCollection(pageIndex, pageSize, sortingRsql, query, withBuildConfigurationSetId(buildConfigurationSetId),
+                isNotArchived());
     }
 
     @Override
@@ -144,9 +161,11 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
         validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
     }
 
-    private void validateRepositoryConfigurationId(RepositoryConfigurationRest repositoryConfiguration) throws InvalidEntityException {
+    private void validateRepositoryConfigurationId(RepositoryConfigurationRest repositoryConfiguration)
+            throws InvalidEntityException {
         if (repositoryConfiguration == null || repositoryConfiguration.getId() == null)
-            throw new InvalidEntityException("RepositoryConfiguration entity has to be created before creating a new BuildConfiguration.");
+            throw new InvalidEntityException(
+                    "RepositoryConfiguration entity has to be created before creating a new BuildConfiguration.");
     }
 
     private void validateDependencies(Integer buildConfigId, Set<Integer> dependenciesIds) throws InvalidEntityException {
@@ -170,8 +189,8 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
     private void validateIfItsNotConflicted(BuildConfigurationRest buildConfigurationRest)
             throws ConflictedEntryException, InvalidEntityException {
         ValidationBuilder.validateObject(buildConfigurationRest, WhenUpdating.class).validateConflict(() -> {
-            BuildConfiguration buildConfigurationFromDB =
-                    repository.queryByPredicates(withName(buildConfigurationRest.getName()), isNotArchived());
+            BuildConfiguration buildConfigurationFromDB = repository
+                    .queryByPredicates(withName(buildConfigurationRest.getName()), isNotArchived());
 
             // don't validate against myself
             if (buildConfigurationFromDB != null && !buildConfigurationFromDB.getId().equals(buildConfigurationRest.getId())) {
@@ -191,39 +210,102 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
     protected Function<? super BuildConfigurationRest, ? extends BuildConfiguration> toDBModel() {
         return buildConfigRest -> {
 
-            BuildConfiguration.Builder builder = buildConfigRest.toDBEntityBuilder();
-
             if (buildConfigRest.getId() == null) {
-                return builder.build();
+                return buildConfigRest.toDBEntityBuilder().build();
             }
 
             BuildConfiguration buildConfigDB = repository.queryById(buildConfigRest.getId());
-            // If updating an existing record, need to replace several fields from the rest entity with values from DB
-            if (buildConfigDB != null) {
-                builder.lastModificationTime(buildConfigDB.getLastModificationTime()); // Handled by JPA @Version
-                builder.creationTime(buildConfigDB.getCreationTime()); // Immutable after creation
-                if (buildConfigRest.getDependencyIds() == null) {
-                    // If the client request does not include a list of dependencies, just keep the current set
-                    builder.dependencies(buildConfigDB.getDependencies());
-                }
-            }
-            
-            logger.debug("buildConfigDB.getDependants().isEmpty(): {}", buildConfigDB.getDependants().isEmpty());
-//            logger.debug("buildConfigDB.getDependencies().isEmpty(): {}", buildConfigDB.getDependencies().isEmpty());
+            // // If updating an existing record, need to replace several fields from the rest entity with values from DB
+            // if (buildConfigDB != null) {
+            // builder.lastModificationTime(buildConfigDB.getLastModificationTime()); // Handled by JPA @Version
+            // builder.creationTime(buildConfigDB.getCreationTime()); // Immutable after creation
+            // if (buildConfigRest.getDependencyIds() == null) {
+            // // If the client request does not include a list of dependencies, just keep the current set
+            // builder.dependencies(buildConfigDB.getDependencies());
+            // }
+            // }
+            //
+            // logger.debug("buildConfigDB.getDependants().isEmpty(): {}", buildConfigDB.getDependants().isEmpty());
+            // logger.debug("buildConfigDB.getDependencies().isEmpty(): {}", buildConfigDB.getDependencies().isEmpty());
 
-            return builder.build();
+            // If updating an existing BuildConfiguration, replace the value of the managed entity with the rest object values
+            // and not viceversa
+            if (buildConfigDB != null) {
+                // Do NOT change lastModificationTime // Handled by JPA @Version
+                // Do NOT change creationTime // Immutable after creation
+                // If the client request does not include a list of dependencies, just keep the current set
+                buildConfigDB.setName(buildConfigRest.getName());
+                buildConfigDB.setDescription(buildConfigRest.getDescription());
+                buildConfigDB.setBuildScript(buildConfigRest.getBuildScript());
+                buildConfigDB.setScmRevision(buildConfigRest.getScmRevision());
+                buildConfigDB.setArchived(buildConfigRest.isArchived());
+                buildConfigDB.setGenericParameters(buildConfigRest.getGenericParameters());
+                buildConfigDB.setBuildType(buildConfigRest.getBuildType());
+
+                if (buildConfigRest.getEnvironment() != null) {
+                    if (!equalsId(buildConfigDB.getBuildEnvironment(), buildConfigRest.getEnvironment())) {
+                        buildConfigDB.setBuildEnvironment(
+                                buildEnvironmentRepository.queryById(buildConfigRest.getEnvironment().getId()));
+                    }
+                } else {
+                    buildConfigDB.setBuildEnvironment(null);
+                }
+
+                if (buildConfigRest.getProject() != null) {
+                    if (!equalsId(buildConfigDB.getProject(), buildConfigRest.getProject())) {
+                        buildConfigDB.setProject(projectRepository.queryById(buildConfigRest.getProject().getId()));
+                    }
+                } else {
+                    buildConfigDB.setProject(null);
+                }
+
+                if (buildConfigRest.getRepositoryConfiguration() != null) {
+                    if (!equalsId(buildConfigDB.getRepositoryConfiguration(), buildConfigRest.getRepositoryConfiguration())) {
+                        buildConfigDB.setRepositoryConfiguration(repositoryConfigurationRepository
+                                .queryById(buildConfigRest.getRepositoryConfiguration().getId()));
+                    }
+                } else {
+                    buildConfigDB.setRepositoryConfiguration(null);
+                }
+
+                if (buildConfigRest.getProductVersionId() != null) {
+                    if (buildConfigDB.getProductVersion() != null
+                            && !buildConfigDB.getProductVersion().getId().equals(buildConfigRest.getProductVersionId())) {
+                        buildConfigDB
+                                .setProductVersion(productVersionRepository.queryById(buildConfigRest.getProductVersionId()));
+                    }
+                } else {
+                    buildConfigDB.setProductVersion(null);
+                }
+
+                if (buildConfigRest.getDependencyIds() != null) {
+                    // Remove the existing dependencies not in the array anymore
+                    buildConfigDB.getDependencies()
+                            .removeIf(dependency -> !buildConfigRest.getDependencyIds().contains(dependency.getId()));
+                    buildConfigRest.getDependencyIds().forEach(dependencyId -> {
+                        boolean depExists = buildConfigDB.getDependencies().stream()
+                                .anyMatch(dep -> dep.getId().equals(dependencyId));
+                        if (!depExists) {
+                            BuildConfiguration dependency = repository.queryById(dependencyId);
+                            buildConfigDB.addDependency(dependency);
+                        }
+                    });
+                }
+                return buildConfigDB;
+            }
+
+            return buildConfigRest.toDBEntityBuilder().build();
         };
     }
 
-    public void archive(Integer buildConfigurationId)  throws RestValidationException {
-        ValidationBuilder.validateObject(WhenUpdating.class).validateAgainstRepository(repository, buildConfigurationId,
-                true);
+    public void archive(Integer buildConfigurationId) throws RestValidationException {
+        ValidationBuilder.validateObject(WhenUpdating.class).validateAgainstRepository(repository, buildConfigurationId, true);
         BuildConfiguration buildConfiguration = repository.queryById(buildConfigurationId);
         buildConfiguration.setArchived(true);
 
         // if a build configuration is archived, unlink the build configuration from the build configuration sets it
         // is associated with
-        for (BuildConfigurationSet bcs: buildConfiguration.getBuildConfigurationSets()) {
+        for (BuildConfigurationSet bcs : buildConfiguration.getBuildConfigurationSets()) {
             bcs.removeBuildConfiguration(buildConfiguration);
             buildConfigurationSetRepository.save(bcs);
         }
@@ -232,7 +314,8 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
     }
 
     public Integer clone(Integer buildConfigurationId) throws RestValidationException {
-        ValidationBuilder.validateObject(WhenCreatingNew.class).validateAgainstRepository(repository, buildConfigurationId, true);
+        ValidationBuilder.validateObject(WhenCreatingNew.class).validateAgainstRepository(repository, buildConfigurationId,
+                true);
         BuildConfiguration buildConfiguration = repository.queryById(buildConfigurationId);
         BuildConfiguration clonedBuildConfiguration = buildConfiguration.clone();
         clonedBuildConfiguration = repository.save(clonedBuildConfiguration);
@@ -267,8 +350,8 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
 
     public void setProductVersion(Integer configId, Integer productVersionId) throws RestValidationException {
         BuildConfiguration buildConfig = repository.queryById(configId);
-        ValidationBuilder.validateObject(buildConfig, WhenUpdating.class)
-                .validateCondition(buildConfig!=null, "No build config exists with id: " + configId);
+        ValidationBuilder.validateObject(buildConfig, WhenUpdating.class).validateCondition(buildConfig != null,
+                "No build config exists with id: " + configId);
         ProductVersion productVersion = null;
         if (productVersionId != null) {
             productVersion = productVersionRepository.queryById(productVersionId);
@@ -297,26 +380,24 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
         return new BuildConfigurationAuditedRest(auditedBuildConfig);
     }
 
-    public Optional<BuildConfigurationAuditedRest> getLatestAuditedMatchingBCRest(BuildConfigurationRest buildConfigurationRest) {
-        return buildConfigurationAuditedRepository.findAllByIdOrderByRevDesc(buildConfigurationRest.getId())
-                .stream()
-                .filter(bca -> equalValues(bca, buildConfigurationRest))
-                .findFirst()
+    public Optional<BuildConfigurationAuditedRest> getLatestAuditedMatchingBCRest(
+            BuildConfigurationRest buildConfigurationRest) {
+        return buildConfigurationAuditedRepository.findAllByIdOrderByRevDesc(buildConfigurationRest.getId()).stream()
+                .filter(bca -> equalValues(bca, buildConfigurationRest)).findFirst()
                 .map(buildConfigurationAuditedToRestModel());
     }
 
     private boolean equalValues(BuildConfigurationAudited audited, BuildConfigurationRest rest) {
-        return audited.getName().equals(rest.getName()) &&
-                Objects.equals(audited.getBuildScript(), rest.getBuildScript()) &&
-                equalsId(audited.getRepositoryConfiguration(), rest.getRepositoryConfiguration()) &&
-                Objects.equals(audited.getScmRevision(), rest.getScmRevision()) &&
-                equalsId(audited.getProject(), rest.getProject()) &&
-                equalsId(audited.getBuildEnvironment(), rest.getEnvironment()) &&
-                audited.getGenericParameters().equals(rest.getGenericParameters());
+        return audited.getName().equals(rest.getName()) && Objects.equals(audited.getBuildScript(), rest.getBuildScript())
+                && equalsId(audited.getRepositoryConfiguration(), rest.getRepositoryConfiguration())
+                && Objects.equals(audited.getScmRevision(), rest.getScmRevision())
+                && equalsId(audited.getProject(), rest.getProject())
+                && equalsId(audited.getBuildEnvironment(), rest.getEnvironment())
+                && audited.getGenericParameters().equals(rest.getGenericParameters());
     }
 
-    private boolean equalsId(GenericEntity<Integer> dbEntity,  GenericRestEntity<Integer> restEntity) {
-        if(dbEntity == null || restEntity == null){
+    private boolean equalsId(GenericEntity<Integer> dbEntity, GenericRestEntity<Integer> restEntity) {
+        if (dbEntity == null || restEntity == null) {
             return dbEntity == restEntity;
         }
         return dbEntity.getId().equals(restEntity.getId());
