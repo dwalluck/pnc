@@ -80,7 +80,7 @@ import java.util.stream.Collectors;
  * @author Jakub Bartecek
  */
 @Cacheable
-@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @Entity
 @Audited
 @Table(uniqueConstraints = @UniqueConstraint(name = "uk_build_configuration_name", columnNames = {"name", "active"}),
@@ -153,7 +153,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
     @JoinColumn(foreignKey = @ForeignKey(name = "fk_buildconfiguration_buildenvironment"))
     private BuildEnvironment buildEnvironment;
 
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToMany(mappedBy = "buildConfigurations")
     private Set<BuildConfigurationSet> buildConfigurationSets;
@@ -178,14 +178,13 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      * The set of build configs upon which this build depends. The build configs contained in dependencies should normally be
      * completed before this build config is executed. Similar to Maven dependencies.
      */
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class, cascade = CascadeType.REFRESH)
+    @ManyToMany(cascade = CascadeType.REFRESH)
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
                 referencedColumnName = "id",
-                nullable = false,
                 foreignKey = @ForeignKey(name = "fk_build_configuration_dep_map_dependency")
             )
         },
@@ -193,7 +192,6 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             @JoinColumn(
                 name = "dependant_id",
                 referencedColumnName = "id",
-                nullable = false,
                 foreignKey = @ForeignKey(name = "fk_build_configuration_dep_map_dependant")
             )
         },
@@ -208,12 +206,12 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      * The set of build configs which depend upon this config. These builds must normally be built after this build is
      * completed. This is the reverse relationship as Maven dependencies.
      */
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.LAZY, targetEntity = BuildConfiguration.class)
+    @ManyToMany(mappedBy = "dependencies")
     private Set<BuildConfiguration> dependants;
 
-    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, include = "non-lazy")
+    @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "build_configuration_parameters", joinColumns=@JoinColumn(name = "buildconfiguration_id", foreignKey = @ForeignKey(name = "fk_build_configuration_parameters_bc")))
     @MapKeyColumn(length = 50, name = "key", nullable = false)
@@ -385,11 +383,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
         boolean result = dependencies.add(dependency);
         if (!dependency.getDependants().contains(this)) {
-            logger.error("!dependency.getDependants().contains(this): {} -> dependency.addDependant(this);", this);
             dependency.addDependant(this);
-        }
-        else {
-            logger.error("dependency.getDependants().contains(this): {}", this);
         }
         return result;
     }
@@ -491,11 +485,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
     private boolean addDependant(BuildConfiguration dependant) {
         boolean result = dependants.add(dependant);
         if (!dependant.getDependencies().contains(this)) {
-            logger.error("!dependant.getDependencies().contains(this): {} -> dependant.addDependency(this);", this);
             dependant.addDependency(this);
-        }
-        else {
-            logger.error("dependant.getDependencies().contains(this): {}", this);
         }
         return result;
     }
@@ -777,21 +767,13 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
             // Set the bi-directional mapping
             for (BuildConfiguration dependency : dependencies) {
                 if (!dependency.getDependants().contains(buildConfiguration)) {
-                    logger.error("!dependency.getDependants().contains(buildConfiguration): {} -> dependency.addDependant(buildConfiguration);", buildConfiguration);
                     dependency.addDependant(buildConfiguration);
-                }
-                else {
-                    logger.error("dependency.getDependants().contains(buildConfiguration): {}", buildConfiguration);
                 }
             }
             buildConfiguration.setDependencies(dependencies);
             for (BuildConfiguration dependant : dependants) {
                 if (!dependant.getDependencies().contains(buildConfiguration)) {
-                    logger.error("!dependant.getDependencies().contains(buildConfiguration): {} -> dependant.addDependency(buildConfiguration);", buildConfiguration);
                     dependant.addDependency(buildConfiguration);
-                }
-                else {
-                    logger.error("dependant.getDependencies().contains(buildConfiguration): {}", buildConfiguration);
                 }
             }
             buildConfiguration.setDependants(dependants);

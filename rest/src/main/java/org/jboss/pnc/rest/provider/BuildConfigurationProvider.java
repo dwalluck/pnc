@@ -209,7 +209,7 @@ public class BuildConfigurationProvider extends AbstractProvider<BuildConfigurat
             }
             
             logger.debug("buildConfigDB.getDependants().isEmpty(): {}", buildConfigDB.getDependants().isEmpty());
-            logger.debug("buildConfigDB.getDependencies().isEmpty(): {}", buildConfigDB.getDependencies().isEmpty());
+//            logger.debug("buildConfigDB.getDependencies().isEmpty(): {}", buildConfigDB.getDependencies().isEmpty());
 
             return builder.build();
         };
