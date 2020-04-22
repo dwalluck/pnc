@@ -19,13 +19,10 @@ package org.jboss.pnc.model;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.Type;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.RelationTargetAuditMode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.persistence.Cacheable;
 import javax.persistence.CascadeType;
@@ -94,8 +91,6 @@ import java.util.stream.Collectors;
 public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
 
     private static final long serialVersionUID = -5890729679489304114L;
-
-    private static final Logger logger = LoggerFactory.getLogger(BuildConfiguration.class);
 
     public static final String DEFAULT_SORTING_FIELD = "name";
     public static final String SEQUENCE_NAME = "build_configuration_id_seq";
@@ -180,7 +175,7 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
      */
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @NotAudited
-    @ManyToMany(cascade = CascadeType.REFRESH)
+    @ManyToMany(cascade = { CascadeType.REFRESH })
     @JoinTable(name = "build_configuration_dep_map", joinColumns = {
             @JoinColumn(
                 name = "dependency_id",
@@ -591,15 +586,19 @@ public class BuildConfiguration implements GenericEntity<Integer>, Cloneable {
     public boolean equals(Object o) {
         if (this == o)
             return true;
-        if (!(o instanceof BuildConfiguration))
+        if (o == null || getClass() != o.getClass())
             return false;
-        return id != null && id.equals(((BuildConfiguration) o).getId());
+        BuildConfiguration that = (BuildConfiguration) o;
+
+        if (id != null ? !id.equals(that.id) : that.id != null)
+            return false;
+
+        return true;
     }
 
     @Override
     public int hashCode() {
-        // From https://vladmihalcea.com/how-to-implement-equals-and-hashcode-using-the-jpa-entity-identifier/
-        return 31;
+        return id != null ? id.hashCode() : 0;
     }
 
     public static final String CLONE_PREFIX_DATE_FORMAT = "yyyyMMddHHmmss";
