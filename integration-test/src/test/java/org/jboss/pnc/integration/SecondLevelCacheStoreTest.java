@@ -18,9 +18,20 @@
 package org.jboss.pnc.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.jboss.pnc.rest.utils.StreamHelper.nullableStreamOf;
+import static org.jboss.pnc.rest.utils.Utility.performIfNotNull;
+import static org.jboss.pnc.spi.datastore.predicates.BuildConfigurationPredicates.isNotArchived;
+import static org.jboss.pnc.spi.datastore.predicates.BuildConfigurationPredicates.withName;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -41,7 +52,14 @@ import org.jboss.pnc.model.Project;
 import org.jboss.pnc.model.RepositoryConfiguration;
 import org.jboss.pnc.model.SystemImageType;
 import org.jboss.pnc.rest.restmodel.BuildConfigurationRest;
+import org.jboss.pnc.rest.restmodel.BuildEnvironmentRest;
+import org.jboss.pnc.rest.restmodel.ProjectRest;
+import org.jboss.pnc.rest.restmodel.RepositoryConfigurationRest;
+import org.jboss.pnc.rest.validation.ConflictedEntryValidator;
 import org.jboss.pnc.rest.validation.ValidationBuilder;
+import org.jboss.pnc.rest.validation.exceptions.ConflictedEntryException;
+import org.jboss.pnc.rest.validation.exceptions.InvalidEntityException;
+import org.jboss.pnc.rest.validation.exceptions.RestValidationException;
 import org.jboss.pnc.rest.validation.groups.WhenUpdating;
 import org.jboss.pnc.spi.datastore.repositories.BuildConfigurationRepository;
 import org.jboss.pnc.spi.datastore.repositories.BuildEnvironmentRepository;
@@ -90,6 +108,11 @@ public class SecondLevelCacheStoreTest {
 
     private static int dependencyBCId;
     private static int buildConfigurationId;
+    private static int buildEnvironmentBCId;
+    private static int projectBCId;
+    private static int repositoryConfigurationBCId;
+    private static int productVersionBCId;
+    private static Date creationModificationTime = new Date();
 
     @Deployment
     public static EnterpriseArchive deploy() {
@@ -173,12 +196,17 @@ public class SecondLevelCacheStoreTest {
         BuildConfiguration buildConfiguration = BuildConfiguration.Builder.newBuilder().buildEnvironment(buildEnvironmentBC)
                 .project(projectBC).repositoryConfiguration(repositoryConfigurationBC).name("dependency-analysis-master-new")
                 .description("Test config for Dependency Analysis.").buildScript("mvn clean deploy -DskipTests=true")
-                .scmRevision("master").buildType(BuildType.MVN).dependency(dependencyBC).build();
+                .scmRevision("master").buildType(BuildType.MVN).dependency(dependencyBC).creationTime(creationModificationTime)
+                .lastModificationTime(creationModificationTime).build();
 
         buildConfiguration = buildConfigurationRepository.save(buildConfiguration);
 
         dependencyBCId = dependencyBC.getId();
         buildConfigurationId = buildConfiguration.getId();
+        buildEnvironmentBCId = buildEnvironmentBC.getId();
+        projectBCId = projectBC.getId();
+        repositoryConfigurationBCId = repositoryConfigurationBC.getId();
+        productVersionBCId = productVersionBC.getId();
     }
 
     /**
@@ -203,28 +231,62 @@ public class SecondLevelCacheStoreTest {
     @Test
     @InSequence(1)
     public void bogusUpdateBC() throws Exception {
-        BuildConfiguration savedBuildConfiguration = buildConfigurationRepository.queryById(buildConfigurationId);
 
-        BuildConfigurationRest buildConfigurationRest = new BuildConfigurationRest(savedBuildConfiguration);
+        // Recreate all the REST objects as they were coming from the endpoint
+
+        Map<String, String> attributes = new HashMap<String, String>();
+        attributes.put("MAVEN", "3.5.2");
+        attributes.put("JDK", "1.8.0");
+        attributes.put("OS", "Linux");
+        BuildEnvironmentRest buildEnvironmentRest = new BuildEnvironmentRest();
+        buildEnvironmentRest.setId(buildEnvironmentBCId);
+        buildEnvironmentRest.setName("OpenJDK 1.8.0; Mvn 3.5.2 New");
+        buildEnvironmentRest.setDescription("OpenJDK 1.8.0; Mvn 3.5.2");
+        buildEnvironmentRest.setSystemImageType(SystemImageType.DOCKER_IMAGE);
+        buildEnvironmentRest.setSystemImageRepositoryUrl("docker-registry-default.cloud.registry.upshift.redhat.com");
+        buildEnvironmentRest.setSystemImageId("newcastle/builder-rhel-7-j8-mvn3.5.2:latest");
+        buildEnvironmentRest.setDeprecated(false);
+        buildEnvironmentRest.setAttributes(attributes);
+
+        ProjectRest projectRest = new ProjectRest();
+        projectRest.setId(projectBCId);
+        projectRest.setName("Dependency Analysis New");
+        projectRest.setDescription("Dependency Analysis - Analise project dependencies.");
+        projectRest.setIssueTrackerUrl(null);
+        projectRest.setProjectUrl("https://github.com/project-ncl/dependency-analysis");
+        projectRest.setLicenseId(null);
+
+        RepositoryConfigurationRest repositoryConfigurationRest = new RepositoryConfigurationRest();
+        repositoryConfigurationRest.setId(repositoryConfigurationBCId);
+        repositoryConfigurationRest
+                .setInternalUrl("git+ssh://code.stage.engineering.redhat.com/project-ncl/dependency-analysis-new.git");
+        repositoryConfigurationRest.setExternalUrl("https://github.com/project-ncl/dependency-analysis-new.git");
+        repositoryConfigurationRest.setPreBuildSyncEnabled(false);
+
+        Set<Integer> dependencyIds = new HashSet<Integer>();
+        dependencyIds.add(dependencyBCId);
+        BuildConfigurationRest buildConfigurationRest = new BuildConfigurationRest();
         buildConfigurationRest.setId(buildConfigurationId);
+        buildConfigurationRest.setName("dependency-analysis-master-new");
+        buildConfigurationRest.setDescription("Test config for Dependency Analysis.");
+        buildConfigurationRest.setBuildScript("mvn clean deploy -DskipTests=true");
+        buildConfigurationRest.setScmRevision("master");
+        buildConfigurationRest.setBuildType(BuildType.MVN);
+        buildConfigurationRest.setCreationTime(creationModificationTime);
+        buildConfigurationRest.setLastModificationTime(creationModificationTime);
+        buildConfigurationRest.setArchived(false);
+        buildConfigurationRest.setEnvironment(buildEnvironmentRest);
+        buildConfigurationRest.setProject(projectRest);
+        buildConfigurationRest.setRepositoryConfiguration(repositoryConfigurationRest);
+        buildConfigurationRest.setProductVersionId(productVersionBCId);
+        buildConfigurationRest.setDependencyIds(dependencyIds);
 
-        if (buildConfigurationRest.getDependencyIds() != null && !buildConfigurationRest.getDependencyIds().isEmpty()) {
-
-            BuildConfiguration buildConfig = buildConfigurationRepository.queryById(buildConfigurationId);
-            for (Integer dependencyId : buildConfigurationRest.getDependencyIds()) {
-
-                ValidationBuilder.validateObject(buildConfig, WhenUpdating.class).validateCondition(
-                        !buildConfig.getId().equals(dependencyId), "A build configuration cannot depend on itself");
-
-                BuildConfiguration dependency = buildConfigurationRepository.queryById(dependencyId);
-                ValidationBuilder.validateObject(buildConfig, WhenUpdating.class)
-                        .validateCondition(!dependency.getAllDependencies().contains(buildConfig), "Cannot add dependency from : "
-                                + buildConfig.getId() + " to: " + dependencyId + " because it would introduce a cyclic dependency");
-            }
-        }
+        // Start of update (validateBeforeUpdating in BuildConfigurationProvider)
+        validateBeforeUpdating(buildConfigurationId, buildConfigurationRest);
+        validateIfItsNotConflicted(buildConfigurationRest);
+        validateDependencies(buildConfigurationRest.getId(), buildConfigurationRest.getDependencyIds());
 
         BuildConfiguration.Builder builder = buildConfigurationRest.toDBEntityBuilder();
-
         BuildConfiguration buildConfigDB = buildConfigurationRepository.queryById(buildConfigurationRest.getId());
         // If updating an existing record, need to replace several fields from the rest entity with values from DB
         if (buildConfigDB != null) {
@@ -235,8 +297,46 @@ public class SecondLevelCacheStoreTest {
                 builder.dependencies(buildConfigDB.getDependencies());
             }
         }
-        buildConfigurationRest.setId(buildConfigurationId);
         buildConfigurationRepository.save(builder.build());
     }
 
+    private void validateBeforeUpdating(Integer id, BuildConfigurationRest restEntity) throws RestValidationException {
+        ValidationBuilder.validateObject(restEntity, WhenUpdating.class)
+                .validateNotEmptyArgument()
+                .validateAnnotations()
+                .validateAgainstRepository(buildConfigurationRepository, id, true);
+    }
+
+    private void validateIfItsNotConflicted(BuildConfigurationRest buildConfigurationRest)
+            throws ConflictedEntryException, InvalidEntityException {
+        ValidationBuilder.validateObject(buildConfigurationRest, WhenUpdating.class).validateConflict(() -> {
+            BuildConfiguration buildConfigurationFromDB =
+                    buildConfigurationRepository.queryByPredicates(withName(buildConfigurationRest.getName()), isNotArchived());
+
+            // don't validate against myself
+            if (buildConfigurationFromDB != null && !buildConfigurationFromDB.getId().equals(buildConfigurationRest.getId())) {
+                return new ConflictedEntryValidator.ConflictedEntryValidationError(buildConfigurationFromDB.getId(),
+                        BuildConfiguration.class, "Build configuration with the same name already exists");
+            }
+            return null;
+        });
+    }
+
+    private void validateDependencies(Integer buildConfigId, Set<Integer> dependenciesIds) throws InvalidEntityException {
+        if (dependenciesIds == null || dependenciesIds.isEmpty()) {
+            return;
+        }
+
+        BuildConfiguration buildConfig = buildConfigurationRepository.queryById(buildConfigId);
+        for (Integer dependencyId : dependenciesIds) {
+
+            ValidationBuilder.validateObject(buildConfig, WhenUpdating.class).validateCondition(
+                    !buildConfig.getId().equals(dependencyId), "A build configuration cannot depend on itself");
+
+            BuildConfiguration dependency = buildConfigurationRepository.queryById(dependencyId);
+            ValidationBuilder.validateObject(buildConfig, WhenUpdating.class)
+                    .validateCondition(!dependency.getAllDependencies().contains(buildConfig), "Cannot add dependency from : "
+                            + buildConfig.getId() + " to: " + dependencyId + " because it would introduce a cyclic dependency");
+        }
+    }
 }
