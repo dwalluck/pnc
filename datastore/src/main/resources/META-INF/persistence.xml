@@ -56,11 +56,11 @@
                 - Default eviction algorithm is LRU, least recently used.
           
           -->
-          <property name="hibernate.cache.use_reference_entries" value="true" />
-          <property name="hibernate.cache.use_second_level_cache" value="true" />
+          <property name="hibernate.cache.use_reference_entries" value="false" />
+          <property name="hibernate.cache.use_second_level_cache" value="false" />
           <property name="hibernate.cache.use_query_cache" value="false" />
           <property name="hibernate.cache.region_prefix" value=""/>
-          <property name="hibernate.cache.infinispan.statistics" value="true"/>
+          <property name="hibernate.cache.infinispan.statistics" value="false"/>
 
           <!--
               Custom configurations can be made to the single entities
