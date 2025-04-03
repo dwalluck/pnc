@@ -35,6 +35,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.jboss.pnc.api.enums.LicenseSource;
 
 @Data
 @NoArgsConstructor
@@ -74,6 +75,15 @@ public class DeliverableArtifactLicenseInfo implements GenericEntity<Base32LongI
      * The computed spdx license identifier associated with this license
      */
     private String spdxLicenseId;
+
+    /**
+     * The type of source analyzed for the license information
+     */
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Deprecated(since = "3.1.3", forRemoval = true)
+    private LicenseSource source;
 
     /**
      * The relative url of the source analyzed for the license information
