@@ -30,12 +30,12 @@ import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
 import org.hibernate.annotations.Type;
+import org.jboss.pnc.api.enums.LicenseSource;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.jboss.pnc.api.enums.LicenseSource;
 
 @Data
 @NoArgsConstructor
@@ -83,7 +83,7 @@ public class DeliverableArtifactLicenseInfo implements GenericEntity<Base32LongI
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Deprecated(since = "3.1.3", forRemoval = true)
-    private LicenseSource source;
+    private LicenseSource source = LicenseSource.UNKNOWN;
 
     /**
      * The relative url of the source analyzed for the license information
